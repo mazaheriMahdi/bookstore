@@ -13,6 +13,7 @@ export default {
             database: 'books'
         });
 
+        console.log(query)
         let queryResult = undefined
         client.connect().then(() => {
 
