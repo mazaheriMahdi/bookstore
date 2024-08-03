@@ -21,108 +21,48 @@ app.use((req, res, next) => {
 
     next();
 });
+const filterable_fields = ["book_title", "book_author", "year_of_publication", 'publisher', "isbn"];
+
+function isFilterable(queryParams) {
+    console.log("queryyyyy param =>" + Object.keys(queryParams))
+    for (const x of Object.keys(queryParams)) {
+        if (filterable_fields.includes(x)) {
+            return true;
+        }
+    }
+    return false
+
+}
+
+function build_query(req) {
+    if (!isFilterable(req.query)) {
+        return `SELECT * FROM public.book_metadata ORDER BY id LIMIT 10 OFFSET ${10*req.query.page} ;`
+    } else {
+        const query = Object.keys(req.query).filter(x => filterable_fields.includes(x)).map(x => {
+            return `${x} LIKE '%${req.query[x]}%'`;
+        }).reduce((previousValue, currentValue) => {
+            return previousValue + " AND " + currentValue;
+        })
+        return `SELECT * FROM public.book_metadata WHERE ${query} ORDER BY id LIMIT 10 OFFSET ${10*req.query.page} ;`
+    }
+}
 
 app.get("/books", async (req, res) => {
+    if (req.query.page == null) {
+        res.status(422).json({error: "missing query string parameter 'page'"});
+    }
     try {
-        db.query(`SELECT * FROM public.book_metadata ORDER BY id LIMIT 10 OFFSET ${10*req.query.page} ;`, (result) => {
+        db.query(build_query(req), (result) => {
             db.query("SELECT COUNT(id) FROM book_metadata;", (count) => {
-                res.status(200).json({books: result.rows,current_page_number:req.query.page, pages: count.rows[0]});
+                res.status(200).json({books: result.rows, current_page_number: req.query.page, pages: count.rows[0]});
             })
         })
-
 
     } catch (e) {
         console.error(e);
         res.status(500).send('Internal Server Error');
     }
 })
-
-// app.get("/books", async (req, res) => {
-//   await new Promise((resolve) => setTimeout(resolve, 3000));
-
-//   const fileContent = await fs.readFile("./data/books.json");
-
-//   const booksData = JSON.parse(fileContent);
-
-//   res.status(200).json({ books: booksData });
-// })
-
-
-// app.post("/books", async (req, res) => {
-//   await new Promise((resolve) => setTimeout(resolve, 3000));
-
-//   // req.body.
-//   const fileContent = await fs.readFile("./data/books.json");
-
-//   const booksData = JSON.parse(fileContent);
-
-//   res.status(200).json({ books: booksData });
-// })
-
-app.get("/places", async (req, res) => {
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    const fileContent = await fs.readFile("./data/places.json");
-
-    const placesData = JSON.parse(fileContent);
-
-    res.status(200).json({places: placesData});
-});
-
-app.get("/user-places", async (req, res) => {
-    const fileContent = await fs.readFile("./data/user-places.json");
-
-    const places = JSON.parse(fileContent);
-
-    res.status(200).json({places});
-});
-
-app.put("/user-places", async (req, res) => {
-    const placeId = req.body.placeId;
-
-    const fileContent = await fs.readFile("./data/places.json");
-    const placesData = JSON.parse(fileContent);
-
-    const place = placesData.find((place) => place.id === placeId);
-
-    const userPlacesFileContent = await fs.readFile("./data/user-places.json");
-    const userPlacesData = JSON.parse(userPlacesFileContent);
-
-    let updatedUserPlaces = userPlacesData;
-
-    if (!userPlacesData.some((p) => p.id === place.id)) {
-        updatedUserPlaces = [...userPlacesData, place];
-    }
-
-    await fs.writeFile(
-        "./data/user-places.json",
-        JSON.stringify(updatedUserPlaces)
-    );
-
-    res.status(200).json({userPlaces: updatedUserPlaces});
-});
-
-app.delete("/user-places/:id", async (req, res) => {
-    const placeId = req.params.id;
-
-    const userPlacesFileContent = await fs.readFile("./data/user-places.json");
-    const userPlacesData = JSON.parse(userPlacesFileContent);
-
-    const placeIndex = userPlacesData.findIndex((place) => place.id === placeId);
-
-    let updatedUserPlaces = userPlacesData;
-
-    if (placeIndex >= 0) {
-        updatedUserPlaces.splice(placeIndex, 1);
-    }
-
-    await fs.writeFile(
-        "./data/user-places.json",
-        JSON.stringify(updatedUserPlaces)
-    );
-
-    res.status(200).json({userPlaces: updatedUserPlaces});
-});
 
 // 404
 app.use((req, res, next) => {
