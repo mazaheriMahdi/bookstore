@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  web:
+    image: bookstore
+    environment:
+      db_user: "postgres"
+      db_password: "!@#123qwe"
+      db_host: "postgres"
+      db_port: "5433"
+      db_database: "books"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bookstore
+
+  postgres:
+    image: postgres:14.2
+    container_name: postgres
+    # restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=!@#123qwe
+      - PGDATA=/var/lib/postgresql/data
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - bookstore
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+#  pgadmin:
+#    image: dpage/pgadmin4:latest
+#    container_name: pgadmin
+#    # restart: unless-stopped
+#    environment:
+#      PGADMIN_DEFAULT_EMAIL: "admin@admin.com"
+#      PGADMIN_DEFAULT_PASSWORD: "admin"
+#    volumes:
+#      - pgadmin-data:/var/lib/pgadmin
+#    ports:
+#      - "5050:80"
+#    networks:
+#      - bookstore
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+
+volumes:
+  postgres-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: "./postgresql_data"
+  pgadmin-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: "./pgadmin_data"
+
+
+networks:
+  bookstore:
+    driver: bridge

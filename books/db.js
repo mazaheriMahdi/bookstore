@@ -6,12 +6,20 @@ const {Client} = pkg;
 export default {
     query: async (query,callBack) => {
         const client = new Client({
-            user: 'postgres',
-            password: '!@#123qwe',
-            host: 'localhost',
-            port: 5432, // default Postgres port
-            database: 'books'
+            user: process.env.db_user,
+            password: process.env.db_password,
+            host: process.env.db_host,
+            port: process.env.db_port, // default Postgres port
+            database: process.env.db_database
         });
+        //
+        // console.log({
+        //     user: process.env.db_user,
+        //     password: process.env.db_password,
+        //     host: process.env.db_host,
+        //     port: process.env.db_port, // default Postgres port
+        //     database: process.env.db_database
+        // })
 
         console.log(query)
         let queryResult = undefined
