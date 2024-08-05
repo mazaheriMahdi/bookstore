@@ -1,25 +1,20 @@
 import bodyParser from "body-parser";
 import express from "express";
 import db from "./books/db.js"
-const app = express();
 import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
+
+console.log("starting up the service")
+const app = express();
 // Swagger set up
 const options = {
     definition: {
-        openapi: "3.0.0",
-        info: {
-            title: "Library API",
-            version: "1.0.0",
-            description: "API documentation for the Library system",
-        },
-        servers: [
-            {
-                url: "https://bookstore.abriment.com:3000",
-            },
-        ],
-    },
-    apis: ["./app.js"], // Files containing annotations as above
+        openapi: "3.0.0", info: {
+            title: "Library API", version: "1.0.0", description: "API documentation for the Library system",
+        }, servers: [{
+            url: "https://bookstore.abriment.com",
+        },],
+    }, apis: ["./app.js"], // Files containing annotations as above
 };
 
 const swaggerSpec = swaggerJsdoc(options);
@@ -65,6 +60,7 @@ function build_query(req) {
         return `SELECT * FROM public.book_metadata WHERE ${query} ORDER BY id LIMIT ${req.query[pageSizeQueryParamName] || pageCapacity} OFFSET ${(req.query[pageSizeQueryParamName] || pageCapacity)*req.query.page} ;`
     }
 }
+
 /**
  * @swagger
  * /books:
@@ -174,15 +170,7 @@ app.get("/books", async (req, res) => {
 })
 
 
-const bookFields = [
-    "isbn",
-    "book_title",
-    "book_author",
-    "year_of_publication",
-    "publisher",
-    "image_url_s",
-    "image_url_m",
-    "image_url_l"]
+const bookFields = ["isbn", "book_title", "book_author", "year_of_publication", "publisher", "image_url_s", "image_url_m", "image_url_l"]
 
 
 /**
@@ -248,18 +236,18 @@ const bookFields = [
  *         description: Internal Server Error
  */
 app.post("/books", async (req, res) => {
-    if (req.body == null) {
-        res.status(422).json({error: "missing body"});
-    }
+    try {
+        const missingFields = bookFields.filter((x) => !req.body[x])
+        if (missingFields.length > 0) {
+            res.status(422).json({error: `missing fields ${missingFields.join(" ")}`});
+        }
 
-    const missingFields = bookFields.filter((x) => !req.body[x])
-    if (missingFields.length > 0) {
-        res.status(422).json({error: `missing fields ${missingFields.join(" ")}`});
+        await db.query(`INSERT INTO public.book_metadata(isbn, book_title, book_author, year_of_publication, publisher, image_url_s, image_url_m, image_url_l) VALUES (${bookFields.map(x=>req.body[x])});`, (x) => {
+            res.status(200).json({error: "missing book_metadata", result: x});
+        })
+    } catch (e) {
+        console.log(e)
     }
-
-    await db.query(`INSERT INTO public.book_metadata(isbn, book_title, book_author, year_of_publication, publisher, image_url_s, image_url_m, image_url_l) VALUES (${bookFields.map(x=>req.body[x])});`, (x) => {
-        res.status(200).json({error: "missing book_metadata", result: x});
-    })
 })
 
 // 404
@@ -271,3 +259,4 @@ app.use((req, res, next) => {
 });
 
 app.listen(3000);
+console.log("ready to accept the connections")

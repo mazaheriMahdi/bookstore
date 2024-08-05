@@ -31,7 +31,7 @@ export default {
 
             client.query(query, (err, result) => {
                 if (err) {
-                    console.error('Error executing query', err);
+                    console.log('Error executing query', err);
                 } else {
                     console.log('Query result:', result.rows);
                 }
@@ -41,7 +41,7 @@ export default {
                         console.log('Connection to PostgreSQL closed');
                     })
                     .catch((err) => {
-                        console.error('Error closing connection', err);
+                        console.log('Error closing connection', err);
                     });
                 callBack(result)
                 // Close the connection when done
